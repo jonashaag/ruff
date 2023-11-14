@@ -223,18 +223,19 @@ fn clean_params_dictionary(right: &Expr, locator: &Locator, stylist: &Stylist) -
         for (key, value) in keys.iter().zip(values.iter()) {
             match key {
                 Some(key) => {
-                    if let Expr::StringLiteral(ast::ExprStringLiteral { value: literal, .. }) = key
+                    if let Expr::StringLiteral(ast::ExprStringLiteral {
+                        value: key_string, ..
+                    }) = key
                     {
-                        let key_string = literal.as_str();
                         // If the dictionary key is not a valid variable name, abort.
-                        if !is_identifier(&key_string) {
+                        if !is_identifier(key_string) {
                             return None;
                         }
                         // If there are multiple entries of the same key, abort.
-                        if seen.contains(&key_string.as_ref()) {
+                        if seen.contains(&key_string.as_str()) {
                             return None;
                         }
-                        seen.push(&key_string);
+                        seen.push(key_string);
                         if is_multi_line {
                             if indent.is_none() {
                                 indent = indentation(locator, key);

@@ -74,7 +74,7 @@ fn match_encoded_variable(func: &Expr) -> Option<&Expr> {
 
 fn is_utf8_encoding_arg(arg: &Expr) -> bool {
     if let Expr::StringLiteral(ast::ExprStringLiteral { value, .. }) = &arg {
-        UTF8_LITERALS.contains(&value.as_str().to_lowercase().as_str())
+        UTF8_LITERALS.contains(&value.to_lowercase().as_str())
     } else {
         false
     }

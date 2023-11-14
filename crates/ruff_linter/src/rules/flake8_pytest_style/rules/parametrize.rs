@@ -258,7 +258,7 @@ fn elts_to_csv(elts: &[Expr], generator: Generator) -> Option<String> {
                 if !acc.is_empty() {
                     acc.push(',');
                 }
-                acc.push_str(&value.as_str());
+                acc.push_str(value.as_str());
             }
             acc
         }),
@@ -300,8 +300,8 @@ fn check_names(checker: &mut Checker, decorator: &Decorator, expr: &Expr) {
     let names_type = checker.settings.flake8_pytest_style.parametrize_names_type;
 
     match expr {
-        Expr::StringLiteral(ast::ExprStringLiteral { value, .. }) => {
-            let names = split_names(&value.as_str());
+        Expr::StringLiteral(ast::ExprStringLiteral { value: string, .. }) => {
+            let names = split_names(string);
             if names.len() > 1 {
                 match names_type {
                     types::ParametrizeNameType::Tuple => {
@@ -475,11 +475,12 @@ fn check_values(checker: &mut Checker, names: &Expr, values: &Expr) {
         .flake8_pytest_style
         .parametrize_values_row_type;
 
-    let is_multi_named = if let Expr::StringLiteral(ast::ExprStringLiteral { value, .. }) = &names {
-        split_names(&value.as_str()).len() > 1
-    } else {
-        true
-    };
+    let is_multi_named =
+        if let Expr::StringLiteral(ast::ExprStringLiteral { value: string, .. }) = &names {
+            split_names(string).len() > 1
+        } else {
+            true
+        };
 
     match values {
         Expr::List(ast::ExprList { elts, .. }) => {

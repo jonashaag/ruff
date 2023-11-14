@@ -1184,16 +1184,20 @@ pub struct StringLiteralValue {
 }
 
 impl StringLiteralValue {
-    pub fn single(value: StringLiteral) -> Self {
+    pub fn single(string: StringLiteral) -> Self {
         Self {
-            inner: StringLiteralValueInner::Single(value),
+            inner: StringLiteralValueInner::Single(string),
         }
     }
 
-    pub fn concatenated(values: Vec<StringLiteral>) -> Self {
-        assert!(values.len() > 1);
+    pub fn concatenated(strings: Vec<StringLiteral>) -> Self {
+        assert!(strings.len() > 1);
+        let value = strings.iter().map(StringLiteral::as_str).collect();
         Self {
-            inner: StringLiteralValueInner::Concatenated(values),
+            inner: StringLiteralValueInner::Concatenated(ConcatenatedStringLiteral {
+                strings,
+                value,
+            }),
         }
     }
 
@@ -1212,89 +1216,51 @@ impl StringLiteralValue {
 
     /// Returns an iterator over all the [`StringLiteral`]s contained in this value.
     pub fn parts(&self) -> impl Iterator<Item = &StringLiteral> {
-        self.inner.as_slice().iter()
-    }
-
-    /// Checks if all characters in this string are within the ASCII range.
-    pub fn is_ascii(&self) -> bool {
-        self.parts().all(|part| part.is_ascii())
-    }
-
-    /// Returns `true` if the concatenated string has a length of zero bytes.
-    pub fn is_empty(&self) -> bool {
-        self.parts().all(|part| part.is_empty())
-    }
-
-    /// Returns the length of the concatenated string.
-    pub fn len(&self) -> usize {
-        self.parts().map(|part| part.len()).sum()
-    }
-
-    /// Returns an iterator over the [`char`]s of the concatenated string.
-    pub fn chars(&self) -> impl Iterator<Item = char> + '_ {
-        self.parts().flat_map(|part| part.chars())
-    }
-
-    /// Returns `true` if the concatenated string contains the given character.
-    pub fn contains(&self, ch: char) -> bool {
-        self.chars().any(|c| c == ch)
+        match &self.inner {
+            StringLiteralValueInner::Single(value) => Left(std::iter::once(value)),
+            StringLiteralValueInner::Concatenated(value) => Right(value.strings.iter()),
+        }
     }
 
     /// Returns the concatenated string value.
-    ///
-    /// If the string is implicitly concatenated, this method will allocate a new
-    /// string and copy the contents of all the string literals into it.
-    pub fn as_str(&self) -> Cow<'_, str> {
-        match self.inner.as_slice() {
-            [] => Cow::Borrowed(""),
-            [string] => Cow::Borrowed(string.as_str()),
-            _ => Cow::Owned(self.chars().collect()),
+    pub fn as_str(&self) -> &str {
+        match &self.inner {
+            StringLiteralValueInner::Single(value) => value.as_str(),
+            StringLiteralValueInner::Concatenated(value) => value.value.as_str(),
         }
     }
 }
 
 impl PartialEq<str> for StringLiteralValue {
     fn eq(&self, other: &str) -> bool {
-        if self.len() != other.len() {
-            return false;
-        }
-        // The `zip` here is safe because we have checked the length of both parts.
-        self.chars().zip(other.chars()).all(|(c1, c2)| c1 == c2)
-    }
-}
-
-impl PartialEq<&str> for StringLiteralValue {
-    fn eq(&self, other: &&str) -> bool {
-        self == *other
+        self == other
     }
 }
 
 impl PartialEq<String> for StringLiteralValue {
     fn eq(&self, other: &String) -> bool {
-        self == other.as_str()
+        self == other
+    }
+}
+
+impl Deref for StringLiteralValue {
+    type Target = str;
+
+    fn deref(&self) -> &Self::Target {
+        self.as_str()
     }
 }
 
 impl fmt::Display for StringLiteralValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(&self.as_str())
+        f.write_str(self.as_str())
     }
 }
 
 #[derive(Clone, Debug, PartialEq)]
 enum StringLiteralValueInner {
     Single(StringLiteral),
-    Concatenated(Vec<StringLiteral>),
-}
-
-impl StringLiteralValueInner {
-    /// Extracts a slice containing all the [`StringLiteral`]s contained in this value.
-    fn as_slice(&self) -> &[StringLiteral] {
-        match self {
-            Self::Single(value) => std::slice::from_ref(value),
-            Self::Concatenated(values) => values.as_slice(),
-        }
-    }
+    Concatenated(ConcatenatedStringLiteral),
 }
 
 impl Default for StringLiteralValueInner {
@@ -1349,6 +1315,12 @@ impl From<StringLiteral> for Expr {
         }
         .into()
     }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+struct ConcatenatedStringLiteral {
+    strings: Vec<StringLiteral>,
+    value: String,
 }
 
 /// An AST node that represents either a single bytes literal or an implicitly

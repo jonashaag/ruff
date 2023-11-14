@@ -127,11 +127,10 @@ pub(crate) fn unrecognized_platform(checker: &mut Checker, test: &Expr) {
         // Other values are possible but we don't need them right now.
         // This protects against typos.
         if checker.enabled(Rule::UnrecognizedPlatformName) {
-            let string = value.as_str();
-            if !matches!(string.as_ref(), "linux" | "win32" | "cygwin" | "darwin") {
+            if !matches!(value.as_str(), "linux" | "win32" | "cygwin" | "darwin") {
                 checker.diagnostics.push(Diagnostic::new(
                     UnrecognizedPlatformName {
-                        platform: string.into_owned(),
+                        platform: value.to_string(),
                     },
                     right.range(),
                 ));

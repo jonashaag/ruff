@@ -372,11 +372,10 @@ pub(crate) fn expression(expr: &Expr, checker: &mut Checker) {
                     if let Expr::StringLiteral(ast::ExprStringLiteral { value: string, .. }) =
                         value.as_ref()
                     {
-                        let string = string.as_str();
                         if attr == "join" {
                             // "...".join(...) call
                             if checker.enabled(Rule::StaticJoinToFString) {
-                                flynt::rules::static_join_to_fstring(checker, expr, &string);
+                                flynt::rules::static_join_to_fstring(checker, expr, string);
                             }
                         } else if attr == "format" {
                             // "...".format(...) call
@@ -426,7 +425,7 @@ pub(crate) fn expression(expr: &Expr, checker: &mut Checker) {
 
                             if checker.enabled(Rule::BadStringFormatCharacter) {
                                 pylint::rules::bad_string_format_character::call(
-                                    checker, &string, location,
+                                    checker, string, location,
                                 );
                             }
                         }
@@ -1020,7 +1019,7 @@ pub(crate) fn expression(expr: &Expr, checker: &mut Checker) {
                     Rule::PercentFormatUnsupportedFormatCharacter,
                 ]) {
                     let location = expr.range();
-                    match pyflakes::cformat::CFormatSummary::try_from(value.as_str().as_ref()) {
+                    match pyflakes::cformat::CFormatSummary::try_from(value.as_str()) {
                         Err(CFormatError {
                             typ: CFormatErrorType::UnsupportedFormatChar(c),
                             ..

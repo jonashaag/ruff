@@ -789,7 +789,7 @@ where
             if let Expr::StringLiteral(ast::ExprStringLiteral { value, .. }) = expr {
                 self.deferred.string_type_definitions.push((
                     expr.range(),
-                    &value.as_str(),
+                    value,
                     self.semantic.snapshot(),
                 ));
             } else {
@@ -1188,7 +1188,7 @@ where
                 {
                     self.deferred.string_type_definitions.push((
                         expr.range(),
-                        value.as_str().as_ref(),
+                        value,
                         self.semantic.snapshot(),
                     ));
                 }

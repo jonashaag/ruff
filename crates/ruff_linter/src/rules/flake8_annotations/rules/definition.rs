@@ -508,15 +508,12 @@ fn check_dynamically_typed<F>(
     if let Expr::StringLiteral(ast::ExprStringLiteral {
         range,
         value: string,
-        ..
     }) = annotation
     {
         // Quoted annotations
-        if let Ok((parsed_annotation, _)) = parse_type_annotation(
-            string.as_str().as_ref(),
-            *range,
-            checker.locator().contents(),
-        ) {
+        if let Ok((parsed_annotation, _)) =
+            parse_type_annotation(string, *range, checker.locator().contents())
+        {
             if type_hint_resolves_to_any(
                 &parsed_annotation,
                 checker.semantic(),
