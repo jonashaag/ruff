@@ -69,10 +69,11 @@ pub(crate) fn getattr_with_constant(
     let Expr::StringLiteral(ast::ExprStringLiteral { value, .. }) = arg else {
         return;
     };
-    if !is_identifier(value) {
+    let string = value.as_str();
+    if !is_identifier(&string) {
         return;
     }
-    if is_mangled_private(value) {
+    if is_mangled_private(&string) {
         return;
     }
     if !checker.semantic().is_builtin("getattr") {
@@ -87,12 +88,12 @@ pub(crate) fn getattr_with_constant(
                 Expr::Name(_) | Expr::Attribute(_) | Expr::Subscript(_) | Expr::Call(_)
             ) && !checker.locator().contains_line_break(obj.range())
             {
-                format!("{}.{}", checker.locator().slice(obj), value)
+                format!("{}.{}", checker.locator().slice(obj), string)
             } else {
                 // Defensively parenthesize any other expressions. For example, attribute accesses
                 // on `int` literals must be parenthesized, e.g., `getattr(1, "real")` becomes
                 // `(1).real`. The same is true for named expressions and others.
-                format!("({}).{}", checker.locator().slice(obj), value)
+                format!("({}).{}", checker.locator().slice(obj), string)
             },
             expr.range(),
             checker.locator(),

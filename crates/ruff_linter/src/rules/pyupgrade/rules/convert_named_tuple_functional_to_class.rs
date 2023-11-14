@@ -184,14 +184,15 @@ fn create_fields_from_fields_arg(fields: &Expr) -> Option<Vec<Stmt>> {
                 if annotation.is_starred_expr() {
                     return None;
                 }
-                let ast::ExprStringLiteral { value: field, .. } = field.as_string_literal_expr()?;
-                if !is_identifier(field) {
+                let ast::ExprStringLiteral { value, .. } = field.as_string_literal_expr()?;
+                let field = value.as_str();
+                if !is_identifier(&field) {
                     return None;
                 }
-                if is_dunder(field) {
+                if is_dunder(&field) {
                     return None;
                 }
-                Some(create_field_assignment_stmt(field, annotation))
+                Some(create_field_assignment_stmt(&field, annotation))
             })
             .collect()
     }

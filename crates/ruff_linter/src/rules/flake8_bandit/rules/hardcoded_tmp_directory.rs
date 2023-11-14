@@ -51,13 +51,17 @@ impl Violation for HardcodedTempFile {
 }
 
 /// S108
-pub(crate) fn hardcoded_tmp_directory(checker: &mut Checker, string: &ast::ExprStringLiteral) {
+pub(crate) fn hardcoded_tmp_directory(
+    checker: &mut Checker,
+    string_literal: &ast::ExprStringLiteral,
+) {
+    let string = string_literal.value.as_str();
     if !checker
         .settings
         .flake8_bandit
         .hardcoded_tmp_directory
         .iter()
-        .any(|prefix| string.value.starts_with(prefix))
+        .any(|prefix| string.starts_with(prefix))
     {
         return;
     }
@@ -76,8 +80,8 @@ pub(crate) fn hardcoded_tmp_directory(checker: &mut Checker, string: &ast::ExprS
 
     checker.diagnostics.push(Diagnostic::new(
         HardcodedTempFile {
-            string: string.value.clone(),
+            string: string.into_owned(),
         },
-        string.range,
+        string_literal.range,
     ));
 }

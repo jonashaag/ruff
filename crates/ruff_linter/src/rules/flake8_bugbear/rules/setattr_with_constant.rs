@@ -83,10 +83,11 @@ pub(crate) fn setattr_with_constant(
     let Expr::StringLiteral(ast::ExprStringLiteral { value: name, .. }) = name else {
         return;
     };
-    if !is_identifier(name) {
+    let name = name.as_str();
+    if !is_identifier(&name) {
         return;
     }
-    if is_mangled_private(name) {
+    if is_mangled_private(&name) {
         return;
     }
     if !checker.semantic().is_builtin("setattr") {
@@ -104,7 +105,7 @@ pub(crate) fn setattr_with_constant(
         if expr == child.as_ref() {
             let mut diagnostic = Diagnostic::new(SetAttrWithConstant, expr.range());
             diagnostic.set_fix(Fix::safe_edit(Edit::range_replacement(
-                assignment(obj, name, value, checker.generator()),
+                assignment(obj, &name, value, checker.generator()),
                 expr.range(),
             )));
             checker.diagnostics.push(diagnostic);

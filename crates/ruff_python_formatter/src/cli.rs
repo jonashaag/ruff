@@ -66,11 +66,6 @@ pub fn format_and_debug_print(source: &str, cli: &Cli, source_path: &Path) -> Re
         });
 
     let source_code = SourceCode::new(source);
-    let formatted = format_module_ast(&module, &comment_ranges, source, options)
-        .context("Failed to format node")?;
-    if cli.print_ir {
-        println!("{}", formatted.document().display(source_code));
-    }
     if cli.print_comments {
         // Print preceding, following and enclosing nodes
         let decorated_comments = collect_comments(&module, source_code, &comment_ranges);
@@ -94,7 +89,12 @@ pub fn format_and_debug_print(source: &str, cli: &Cli, source_path: &Path) -> Re
                 comment.slice().text(source_code),
             );
         }
-        println!("{:#?}", formatted.context().comments().debug(source_code));
+        // println!("{:#?}", formatted.context().comments().debug(source_code));
+    }
+    let formatted = format_module_ast(&module, &comment_ranges, source, options)
+        .context("Failed to format node")?;
+    if cli.print_ir {
+        println!("{}", formatted.document().display(source_code));
     }
     Ok(formatted
         .print()

@@ -789,7 +789,7 @@ where
             if let Expr::StringLiteral(ast::ExprStringLiteral { value, .. }) = expr {
                 self.deferred.string_type_definitions.push((
                     expr.range(),
-                    value,
+                    &value.as_str(),
                     self.semantic.snapshot(),
                 ));
             } else {
@@ -1188,7 +1188,7 @@ where
                 {
                     self.deferred.string_type_definitions.push((
                         expr.range(),
-                        value,
+                        value.as_str().as_ref(),
                         self.semantic.snapshot(),
                     ));
                 }
@@ -1272,9 +1272,9 @@ where
 
     fn visit_format_spec(&mut self, format_spec: &'b Expr) {
         match format_spec {
-            Expr::FString(ast::ExprFString { values, .. }) => {
-                for value in values {
-                    self.visit_expr(value);
+            Expr::FString(ast::ExprFString { value, .. }) => {
+                for expr in value.elements() {
+                    self.visit_expr(expr);
                 }
             }
             _ => unreachable!("Unexpected expression for format_spec"),

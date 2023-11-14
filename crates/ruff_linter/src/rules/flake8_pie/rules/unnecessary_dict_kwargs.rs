@@ -110,8 +110,9 @@ pub(crate) fn unnecessary_dict_kwargs(checker: &mut Checker, expr: &Expr, kwargs
 /// Return `Some` if a key is a valid keyword argument name, or `None` otherwise.
 fn as_kwarg(key: &Expr) -> Option<&str> {
     if let Expr::StringLiteral(ast::ExprStringLiteral { value, .. }) = key {
-        if is_identifier(value) {
-            return Some(value);
+        let kwarg = value.as_str().as_ref();
+        if is_identifier(kwarg) {
+            return Some(kwarg);
         }
     }
     None

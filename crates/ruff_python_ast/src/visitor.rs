@@ -475,8 +475,8 @@ pub fn walk_expr<'a, V: Visitor<'a> + ?Sized>(visitor: &mut V, expr: &'a Expr) {
                 visitor.visit_format_spec(expr);
             }
         }
-        Expr::FString(ast::ExprFString { values, .. }) => {
-            for expr in values {
+        Expr::FString(ast::ExprFString { value, .. }) => {
+            for expr in value.elements() {
                 visitor.visit_expr(expr);
             }
         }

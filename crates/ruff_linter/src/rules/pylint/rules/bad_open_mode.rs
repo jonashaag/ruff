@@ -63,7 +63,7 @@ pub(crate) fn bad_open_mode(checker: &mut Checker, call: &ast::ExprCall) {
         return;
     };
 
-    if is_valid_mode(value) {
+    if is_valid_mode(value.chars()) {
         return;
     }
 
@@ -154,10 +154,13 @@ impl TryFrom<char> for OpenMode {
 }
 
 /// Returns `true` if the open mode is valid.
-fn is_valid_mode(mode: &str) -> bool {
+fn is_valid_mode<I>(mode: I) -> bool
+where
+    I: Iterator<Item = char>,
+{
     // Flag duplicates and invalid characters.
     let mut flags = OpenMode::empty();
-    for char in mode.chars() {
+    for char in mode {
         let Ok(flag) = OpenMode::try_from(char) else {
             return false;
         };

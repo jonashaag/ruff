@@ -120,11 +120,11 @@ fn match_typed_dict_assign<'a>(
 }
 
 /// Generate a [`Stmt::AnnAssign`] representing the provided field definition.
-fn create_field_assignment_stmt(field: &str, annotation: &Expr) -> Stmt {
+fn create_field_assignment_stmt(field: String, annotation: &Expr) -> Stmt {
     ast::StmtAnnAssign {
         target: Box::new(
             ast::ExprName {
-                id: field.into(),
+                id: field,
                 ctx: ExprContext::Load,
                 range: TextRange::default(),
             }
@@ -173,14 +173,15 @@ fn fields_from_dict_literal(keys: &[Option<Expr>], values: &[Expr]) -> Option<Ve
         keys.iter()
             .zip(values.iter())
             .map(|(key, value)| match key {
-                Some(Expr::StringLiteral(ast::ExprStringLiteral { value: field, .. })) => {
-                    if !is_identifier(field) {
+                Some(Expr::StringLiteral(ast::ExprStringLiteral { value: literal, .. })) => {
+                    let field = literal.as_str();
+                    if !is_identifier(&field) {
                         return None;
                     }
-                    if is_dunder(field) {
+                    if is_dunder(&field) {
                         return None;
                     }
-                    Some(create_field_assignment_stmt(field, value))
+                    Some(create_field_assignment_stmt(field.into_owned(), value))
                 }
                 _ => None,
             })
@@ -218,8 +219,7 @@ fn fields_from_keywords(keywords: &[Keyword]) -> Option<Vec<Stmt>> {
         .map(|keyword| {
             keyword
                 .arg
-                .as_ref()
-                .map(|field| create_field_assignment_stmt(field, &keyword.value))
+                .map(|field| create_field_assignment_stmt(field.to_string(), &keyword.value))
         })
         .collect()
 }

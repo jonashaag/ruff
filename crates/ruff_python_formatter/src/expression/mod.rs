@@ -114,6 +114,9 @@ impl FormatRule<Expr, PyFormatContext<'_>> for FormatExpr {
             Expr::Tuple(expr) => expr.format().fmt(f),
             Expr::Slice(expr) => expr.format().fmt(f),
             Expr::IpyEscapeCommand(expr) => expr.format().fmt(f),
+            Expr::StringLiteral(_) => todo!(),
+            Expr::BytesLiteral(_) => todo!(),
+            Expr::FString(_) => todo!(),
         });
         let parenthesize = match parentheses {
             Parentheses::Preserve => is_expression_parenthesized(
@@ -301,6 +304,9 @@ fn format_with_parentheses_comments(
         Expr::Tuple(expr) => FormatNodeRule::fmt_fields(expr.format().rule(), expr, f),
         Expr::Slice(expr) => FormatNodeRule::fmt_fields(expr.format().rule(), expr, f),
         Expr::IpyEscapeCommand(expr) => FormatNodeRule::fmt_fields(expr.format().rule(), expr, f),
+        Expr::StringLiteral(_) => todo!(),
+        Expr::BytesLiteral(_) => todo!(),
+        Expr::FString(_) => todo!(),
     });
 
     leading_comments(leading_outer).fmt(f)?;
@@ -589,6 +595,9 @@ impl NeedsParentheses for Expr {
             Expr::Tuple(expr) => expr.needs_parentheses(parent, context),
             Expr::Slice(expr) => expr.needs_parentheses(parent, context),
             Expr::IpyEscapeCommand(expr) => expr.needs_parentheses(parent, context),
+            Expr::StringLiteral(_) => todo!(),
+            Expr::BytesLiteral(_) => todo!(),
+            Expr::FString(_) => todo!(),
         }
     }
 }
@@ -843,6 +852,9 @@ impl<'input> CanOmitOptionalParenthesesVisitor<'input> {
             | Expr::Name(_)
             | Expr::Slice(_)
             | Expr::IpyEscapeCommand(_) => {}
+            Expr::FString(_) => todo!(),
+            Expr::StringLiteral(_) => todo!(),
+            Expr::BytesLiteral(_) => todo!(),
         };
 
         walk_expr(self, expr);

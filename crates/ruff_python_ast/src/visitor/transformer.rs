@@ -462,10 +462,11 @@ pub fn walk_expr<V: Transformer + ?Sized>(visitor: &V, expr: &mut Expr) {
                 visitor.visit_format_spec(expr);
             }
         }
-        Expr::FString(ast::ExprFString { values, .. }) => {
-            for expr in values {
-                visitor.visit_expr(expr);
-            }
+        Expr::FString(ast::ExprFString { value, .. }) => {
+            // TODO: Fix the mutability problem
+            // for expr in value.elements() {
+            //     visitor.visit_expr(expr);
+            // }
         }
         Expr::StringLiteral(_)
         | Expr::BytesLiteral(_)

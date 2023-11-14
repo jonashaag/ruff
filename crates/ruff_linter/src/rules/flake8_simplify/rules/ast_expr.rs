@@ -138,7 +138,7 @@ pub(crate) fn use_capital_environment_variables(checker: &mut Checker, expr: &Ex
     let Some(arg) = args.get(0) else {
         return;
     };
-    let Expr::StringLiteral(ast::ExprStringLiteral { value: env_var, .. }) = arg else {
+    let Expr::StringLiteral(ast::ExprStringLiteral { value, .. }) = arg else {
         return;
     };
     if !checker
@@ -154,19 +154,20 @@ pub(crate) fn use_capital_environment_variables(checker: &mut Checker, expr: &Ex
         return;
     }
 
-    if is_lowercase_allowed(env_var) {
+    let env_var = value.as_str();
+    if is_lowercase_allowed(&env_var) {
         return;
     }
 
     let capital_env_var = env_var.to_ascii_uppercase();
-    if &capital_env_var == env_var {
+    if &capital_env_var == &env_var {
         return;
     }
 
     checker.diagnostics.push(Diagnostic::new(
         UncapitalizedEnvironmentVariables {
             expected: SourceCodeSnippet::new(capital_env_var),
-            actual: SourceCodeSnippet::new(env_var.clone()),
+            actual: SourceCodeSnippet::new(env_var.into_owned()),
         },
         arg.range(),
     ));
@@ -190,35 +191,31 @@ fn check_os_environ_subscript(checker: &mut Checker, expr: &Expr) {
     if id != "os" || attr != "environ" {
         return;
     }
-    let Expr::StringLiteral(ast::ExprStringLiteral {
-        value: env_var,
-        unicode,
-        ..
-    }) = slice.as_ref()
-    else {
+    let Expr::StringLiteral(ast::ExprStringLiteral { value, .. }) = slice.as_ref() else {
         return;
     };
 
-    if is_lowercase_allowed(env_var) {
+    let env_var = value.as_str();
+    if is_lowercase_allowed(&env_var) {
         return;
     }
 
     let capital_env_var = env_var.to_ascii_uppercase();
-    if &capital_env_var == env_var {
+    if &capital_env_var == &env_var {
         return;
     }
 
     let mut diagnostic = Diagnostic::new(
         UncapitalizedEnvironmentVariables {
             expected: SourceCodeSnippet::new(capital_env_var.clone()),
-            actual: SourceCodeSnippet::new(env_var.clone()),
+            actual: SourceCodeSnippet::new(env_var.into_owned()),
         },
         slice.range(),
     );
-    let node = ast::ExprStringLiteral {
+    let node = ast::StringLiteral {
         value: capital_env_var,
-        unicode: *unicode,
-        ..ast::ExprStringLiteral::default()
+        unicode: value.is_unicode(),
+        ..ast::StringLiteral::default()
     };
     let new_env_var = node.into();
     diagnostic.set_fix(Fix::unsafe_edit(Edit::range_replacement(
