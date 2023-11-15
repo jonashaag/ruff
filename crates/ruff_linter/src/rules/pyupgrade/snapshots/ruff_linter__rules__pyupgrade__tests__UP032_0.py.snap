@@ -990,9 +990,9 @@ UP032_0.py:213:1: UP032 [*] Use f-string instead of `format` call
 211 211 | 
 212 212 | # The first string will be converted to an f-string and the curly braces in the second should be converted to be unescaped
 213 213 | (
-214     |-    "{}"
     214 |+    f"{a}"
-215 215 |     "{{}}"
+214 215 |     "{}"
+215     |-    "{{}}"
 216     |-).format(a)
     216 |+)
 217 217 | 
