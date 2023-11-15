@@ -1,6 +1,5 @@
 #![allow(clippy::derive_partial_eq_without_eq)]
 
-use std::borrow::Cow;
 use std::fmt;
 use std::fmt::Debug;
 use std::ops::Deref;
@@ -998,7 +997,7 @@ impl FStringValue {
     /// Creates a new f-string with the given value.
     pub fn single(value: FString) -> Self {
         Self {
-            inner: FStringValueInner::Single(value),
+            inner: FStringValueInner::Single(FStringPart::FString(value)),
         }
     }
 
@@ -1020,19 +1019,31 @@ impl FStringValue {
         matches!(self.inner, FStringValueInner::Concatenated(_))
     }
 
-    /// Returns an iterator over all the [`FStringPartRef`]s contained in this value.
-    pub fn parts(&self) -> impl Iterator<Item = FStringPartRef<'_>> {
-        self.inner.parts()
+    /// Returns an iterator over all the [`FStringPart`]s contained in this value.
+    pub fn parts(&self) -> impl Iterator<Item = &FStringPart> {
+        match &self.inner {
+            FStringValueInner::Single(part) => Left(std::iter::once(part)),
+            FStringValueInner::Concatenated(parts) => Right(parts.iter()),
+        }
+    }
+
+    /// Returns an iterator over all the [`FStringPart`]s contained in this value
+    /// that allows modification.
+    pub(crate) fn parts_mut(&mut self) -> impl Iterator<Item = &mut FStringPart> {
+        match &mut self.inner {
+            FStringValueInner::Single(part) => Left(std::iter::once(part)),
+            FStringValueInner::Concatenated(parts) => Right(parts.iter_mut()),
+        }
     }
 
     /// Returns an iterator over the [`StringLiteral`]s contained in this value.
     pub fn literals(&self) -> impl Iterator<Item = &StringLiteral> {
-        self.inner.parts().filter_map(|part| part.as_literal())
+        self.parts().filter_map(|part| part.as_literal())
     }
 
     /// Returns an iterator over the [`FString`]s contained in this value.
     pub fn f_strings(&self) -> impl Iterator<Item = &FString> {
-        self.inner.parts().filter_map(|part| part.as_f_string())
+        self.parts().filter_map(|part| part.as_f_string())
     }
 
     /// Returns an iterator over all the f-string elements contained in this value.
@@ -1050,21 +1061,19 @@ impl FStringValue {
         self.f_strings().flat_map(|fstring| fstring.values.iter())
     }
 
-    // /// Returns a flattened iterator over the expressions contained within the
-    // /// [`FString`]s of this value that allows modifing each expression in place.
-    // pub(crate) fn expressions_mut(&mut self) -> impl Iterator<Item = &mut Expr> {
-    //     self.inner
-    //         .parts()
-    //         .filter_map(|mut part| part.as_mut_f_string())
-    //         .flat_map(|fstring| fstring.values.iter_mut())
-    // }
+    /// Returns an iterator over all the f-string elements that allows modification.
+    pub(crate) fn elements_mut(&mut self) -> impl Iterator<Item = &mut Expr> {
+        self.parts_mut()
+            .filter_map(|part| part.as_mut_f_string())
+            .flat_map(|fstring| fstring.values.iter_mut())
+    }
 
     /// Returns `true` if the f-string value is empty, `false` otherwise.
     // TODO: This is not correct. It's used only in one place, so better to inline the logic
     pub fn is_empty(&self) -> bool {
-        self.inner.parts().all(|part| match part {
-            FStringPartRef::Literal(literal) => literal.is_empty(),
-            FStringPartRef::FString(fstring) => fstring.values.is_empty(),
+        self.parts().all(|part| match part {
+            FStringPart::Literal(literal) => literal.is_empty(),
+            FStringPart::FString(fstring) => fstring.values.is_empty(),
         })
     }
 }
@@ -1072,19 +1081,13 @@ impl FStringValue {
 #[derive(Clone, Debug, PartialEq)]
 enum FStringValueInner {
     /// A single f-string i.e., `f"foo"`.
-    Single(FString),
+    ///
+    /// This is always going to be `FStringPart::FString` variant which is
+    /// maintained by the `FStringValue::single` constructor.
+    Single(FStringPart),
 
     /// An implicitly concatenated f-string i.e., `"foo" f"bar {x}"`.
     Concatenated(Vec<FStringPart>),
-}
-
-impl FStringValueInner {
-    fn parts(&self) -> impl Iterator<Item = FStringPartRef<'_>> {
-        match self {
-            Self::Single(fstring) => Left(std::iter::once(FStringPartRef::FString(fstring))),
-            Self::Concatenated(parts) => Right(parts.iter().map(FStringPartRef::from)),
-        }
-    }
 }
 
 /// An f-string part which is either a string literal or an f-string.
@@ -1092,46 +1095,6 @@ impl FStringValueInner {
 pub enum FStringPart {
     Literal(StringLiteral),
     FString(FString),
-}
-
-/// A reference to [`FStringPart`].
-#[derive(Clone, Debug, PartialEq)]
-pub enum FStringPartRef<'a> {
-    Literal(&'a StringLiteral),
-    FString(&'a FString),
-}
-
-impl<'a> FStringPartRef<'a> {
-    pub const fn is_literal(&self) -> bool {
-        matches!(self, Self::Literal(_))
-    }
-
-    pub const fn is_f_string(&self) -> bool {
-        matches!(self, Self::FString(_))
-    }
-
-    pub const fn as_literal(&self) -> Option<&'a StringLiteral> {
-        match self {
-            Self::Literal(literal) => Some(literal),
-            Self::FString(_) => None,
-        }
-    }
-
-    pub const fn as_f_string(&self) -> Option<&'a FString> {
-        match self {
-            Self::FString(fstring) => Some(fstring),
-            Self::Literal(_) => None,
-        }
-    }
-}
-
-impl<'a> From<&'a FStringPart> for FStringPartRef<'a> {
-    fn from(part: &'a FStringPart) -> Self {
-        match part {
-            FStringPart::Literal(string) => Self::Literal(string),
-            FStringPart::FString(fstring) => Self::FString(fstring),
-        }
-    }
 }
 
 /// An AST node that represents a single f-string which is part of an [`ExprFString`].
@@ -1388,18 +1351,6 @@ impl BytesLiteralValue {
         self.parts()
             .flat_map(|part| part.as_slice().iter().copied())
     }
-
-    /// Extracts a slice containing all the bytes ([`u8`]) contained in this value.
-    ///
-    /// If the bytes literal is implicitly concatenated, this method will allocate a
-    /// new vector and copy the contents of all the bytes literals into it.
-    pub fn as_slice(&self) -> Cow<'_, [u8]> {
-        match self.inner.as_slice() {
-            [] => Cow::Borrowed(&[]),
-            [bytes] => Cow::Borrowed(bytes.as_slice()),
-            _ => Cow::Owned(self.bytes().collect()),
-        }
-    }
 }
 
 impl PartialEq<[u8]> for BytesLiteralValue {
@@ -1411,13 +1362,6 @@ impl PartialEq<[u8]> for BytesLiteralValue {
         self.bytes()
             .zip(other.iter().copied())
             .all(|(b1, b2)| b1 == b2)
-    }
-}
-
-impl fmt::Display for BytesLiteralValue {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // OK because Python bytes are ASCII only.
-        f.write_str(std::str::from_utf8(&self.as_slice()).expect("ASCII only"))
     }
 }
 

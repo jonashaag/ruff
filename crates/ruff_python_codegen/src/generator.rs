@@ -1296,10 +1296,10 @@ impl<'a> Generator<'a> {
         for f_string_part in value.parts() {
             self.p_delim(&mut first, " ");
             match f_string_part {
-                ast::FStringPartRef::Literal(string_literal) => {
+                ast::FStringPart::Literal(string_literal) => {
                     self.unparse_string_literal(string_literal);
                 }
-                ast::FStringPartRef::FString(f_string) => {
+                ast::FStringPart::FString(f_string) => {
                     self.unparse_f_string(&f_string.values, is_spec);
                 }
             }
@@ -1709,7 +1709,7 @@ class Foo:
         assert_eq!(round_trip(r#"u'hello'"#), r#"u"hello""#);
         assert_eq!(round_trip(r#"r'hello'"#), r#""hello""#);
         assert_eq!(round_trip(r#"b'hello'"#), r#"b"hello""#);
-        assert_eq!(round_trip(r#"("abc" "def" "ghi")"#), r#""abcdefghi""#);
+        assert_eq!(round_trip(r#"("abc" "def" "ghi")"#), r#""abc" "def" "ghi""#);
         assert_eq!(round_trip(r#""he\"llo""#), r#"'he"llo'"#);
         assert_eq!(round_trip(r#"f"abc{'def'}{1}""#), r#"f"abc{'def'}{1}""#);
         assert_eq!(round_trip(r#"f'abc{"def"}{1}'"#), r#"f"abc{'def'}{1}""#);
@@ -1722,6 +1722,13 @@ class Foo:
         assert_round_trip!(r#"f"{ chr(65)  =   !r}""#);
         assert_round_trip!(r#"f"{ chr(65)  =   :#x}""#);
         assert_round_trip!(r#"f"{a=!r:0.05f}""#);
+    }
+
+    #[test]
+    fn implicit_string_concatenation() {
+        assert_round_trip!(r#""first" "second" "third""#);
+        assert_round_trip!(r#"b"first" b"second" b"third""#);
+        assert_round_trip!(r#""first" "second" f"third {var}""#);
     }
 
     #[test]

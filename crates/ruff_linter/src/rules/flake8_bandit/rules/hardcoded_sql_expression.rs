@@ -10,8 +10,6 @@ use ruff_text_size::Ranged;
 
 use crate::checkers::ast::Checker;
 
-use super::super::helpers::string_literal;
-
 static SQL_REGEX: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"(?i)\b(select\s.+\sfrom\s|delete\s+from\s|(insert|replace)\s.+\svalues\s|update\s.+\sset\s)")
         .unwrap()
@@ -46,10 +44,6 @@ impl Violation for HardcodedSQLExpression {
     }
 }
 
-fn has_string_literal(expr: &Expr) -> bool {
-    string_literal(expr).is_some()
-}
-
 fn matches_sql_statement(string: &str) -> bool {
     SQL_REGEX.is_match(string)
 }
@@ -67,7 +61,7 @@ fn matches_string_format_expression(expr: &Expr, semantic: &SemanticModel) -> bo
                 .current_expression_parent()
                 .map_or(true, |parent| !parent.is_bin_op_expr())
             {
-                if any_over_expr(expr, &has_string_literal) {
+                if any_over_expr(expr, &Expr::is_string_literal_expr) {
                     return true;
                 }
             }
@@ -78,7 +72,7 @@ fn matches_string_format_expression(expr: &Expr, semantic: &SemanticModel) -> bo
                 return false;
             };
             // "select * from table where val = {}".format(...)
-            attr == "format" && string_literal(value).is_some()
+            attr == "format" && value.is_string_literal_expr()
         }
         // f"select * from table where val = {val}"
         Expr::FString(_) => true,
@@ -86,10 +80,34 @@ fn matches_string_format_expression(expr: &Expr, semantic: &SemanticModel) -> bo
     }
 }
 
+fn concatenated_f_string_literal(expr: &ast::ExprFString) -> String {
+    let mut string = String::new();
+    for f_string_part in expr.value.parts() {
+        match f_string_part {
+            ast::FStringPart::Literal(string_literal) => string.push_str(string_literal),
+            ast::FStringPart::FString(f_string) => string.push_str(
+                &f_string
+                    .values
+                    .iter()
+                    .filter_map(|expr| {
+                        expr.as_string_literal_expr()
+                            .map(|string_literal| string_literal.value.as_str())
+                    })
+                    .collect::<String>(),
+            ),
+        }
+    }
+    string
+}
+
 /// S608
 pub(crate) fn hardcoded_sql_expression(checker: &mut Checker, expr: &Expr) {
     if matches_string_format_expression(expr, checker.semantic()) {
-        if matches_sql_statement(&checker.generator().expr(expr)) {
+        let source_code = match expr {
+            Expr::FString(f_string) => concatenated_f_string_literal(f_string),
+            _ => checker.generator().expr(expr),
+        };
+        if matches_sql_statement(&source_code) {
             checker
                 .diagnostics
                 .push(Diagnostic::new(HardcodedSQLExpression, expr.range()));

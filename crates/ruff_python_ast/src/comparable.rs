@@ -579,11 +579,11 @@ pub enum ComparableFStringPart<'a> {
     FString(ComparableFString<'a>),
 }
 
-impl<'a> From<ast::FStringPartRef<'a>> for ComparableFStringPart<'a> {
-    fn from(f_string_part: ast::FStringPartRef<'a>) -> Self {
+impl<'a> From<&'a ast::FStringPart> for ComparableFStringPart<'a> {
+    fn from(f_string_part: &'a ast::FStringPart) -> Self {
         match f_string_part {
-            ast::FStringPartRef::Literal(string_literal) => Self::Literal(string_literal.into()),
-            ast::FStringPartRef::FString(f_string) => Self::FString(f_string.into()),
+            ast::FStringPart::Literal(string_literal) => Self::Literal(string_literal.into()),
+            ast::FStringPart::FString(f_string) => Self::FString(f_string.into()),
         }
     }
 }

@@ -979,17 +979,23 @@ pub(crate) fn expression(expr: &Expr, checker: &mut Checker) {
                 pylint::rules::await_outside_async(checker, expr);
             }
         }
-        Expr::FString(fstring) => {
-            if checker.enabled(Rule::FStringMissingPlaceholders) {
-                pyflakes::rules::f_string_missing_placeholders(fstring, checker);
+        Expr::FString(ast::ExprFString { value, .. }) => {
+            if checker.any_enabled(&[
+                Rule::FStringMissingPlaceholders,
+                Rule::ExplicitFStringTypeConversion,
+            ]) {
+                for f_string in value.f_strings() {
+                    if checker.enabled(Rule::FStringMissingPlaceholders) {
+                        pyflakes::rules::f_string_missing_placeholders(checker, f_string);
+                    }
+                    if checker.enabled(Rule::ExplicitFStringTypeConversion) {
+                        ruff::rules::explicit_f_string_type_conversion(checker, f_string);
+                    }
+                }
             }
-            // TODO
-            // if checker.enabled(Rule::HardcodedSQLExpression) {
-            //     flake8_bandit::rules::hardcoded_sql_expression(checker, expr);
-            // }
-            // if checker.enabled(Rule::ExplicitFStringTypeConversion) {
-            //     ruff::rules::explicit_f_string_type_conversion(checker, expr, values);
-            // }
+            if checker.enabled(Rule::HardcodedSQLExpression) {
+                flake8_bandit::rules::hardcoded_sql_expression(checker, expr);
+            }
         }
         Expr::BinOp(ast::ExprBinOp {
             left,

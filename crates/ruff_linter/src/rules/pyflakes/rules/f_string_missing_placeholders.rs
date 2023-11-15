@@ -46,32 +46,30 @@ impl AlwaysFixableViolation for FStringMissingPlaceholders {
 }
 
 /// F541
-pub(crate) fn f_string_missing_placeholders(expr: &ast::ExprFString, checker: &mut Checker) {
-    for fstring in expr.value.f_strings() {
-        if fstring.values.iter().any(Expr::is_formatted_value_expr) {
-            continue;
-        }
-
-        let first_char = checker
-            .locator()
-            .slice(TextRange::at(fstring.start(), TextSize::new(1)));
-        // f"..."  => f_position = 0
-        // fr"..." => f_position = 0
-        // rf"..." => f_position = 1
-        let f_position = u32::from(!(first_char == "f" || first_char == "F"));
-        let prefix_range = TextRange::at(
-            fstring.start() + TextSize::new(f_position),
-            TextSize::new(1),
-        );
-
-        let mut diagnostic = Diagnostic::new(FStringMissingPlaceholders, fstring.range());
-        diagnostic.set_fix(convert_f_string_to_regular_string(
-            prefix_range,
-            fstring.range(),
-            checker.locator(),
-        ));
-        checker.diagnostics.push(diagnostic);
+pub(crate) fn f_string_missing_placeholders(checker: &mut Checker, f_string: &ast::FString) {
+    if f_string.values.iter().any(Expr::is_formatted_value_expr) {
+        return;
     }
+
+    let first_char = checker
+        .locator()
+        .slice(TextRange::at(f_string.start(), TextSize::new(1)));
+    // f"..."  => f_position = 0
+    // fr"..." => f_position = 0
+    // rf"..." => f_position = 1
+    let f_position = u32::from(!(first_char == "f" || first_char == "F"));
+    let prefix_range = TextRange::at(
+        f_string.start() + TextSize::new(f_position),
+        TextSize::new(1),
+    );
+
+    let mut diagnostic = Diagnostic::new(FStringMissingPlaceholders, f_string.range());
+    diagnostic.set_fix(convert_f_string_to_regular_string(
+        prefix_range,
+        f_string.range(),
+        checker.locator(),
+    ));
+    checker.diagnostics.push(diagnostic);
 }
 
 /// Unescape an f-string body by replacing `{{` with `{` and `}}` with `}`.

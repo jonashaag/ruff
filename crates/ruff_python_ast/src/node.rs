@@ -2699,10 +2699,10 @@ impl AstNode for ast::ExprFString {
 
         for f_string_part in value.parts() {
             match f_string_part {
-                ast::FStringPartRef::Literal(string_literal) => {
+                ast::FStringPart::Literal(string_literal) => {
                     visitor.visit_string_literal(string_literal);
                 }
-                ast::FStringPartRef::FString(f_string) => {
+                ast::FStringPart::FString(f_string) => {
                     visitor.visit_f_string(f_string);
                 }
             }
