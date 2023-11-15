@@ -1061,13 +1061,6 @@ impl FStringValue {
         self.f_strings().flat_map(|fstring| fstring.values.iter())
     }
 
-    /// Returns an iterator over all the f-string elements that allows modification.
-    pub(crate) fn elements_mut(&mut self) -> impl Iterator<Item = &mut Expr> {
-        self.parts_mut()
-            .filter_map(|part| part.as_mut_f_string())
-            .flat_map(|fstring| fstring.values.iter_mut())
-    }
-
     /// Returns `true` if the f-string value is empty, `false` otherwise.
     // TODO: This is not correct. It's used only in one place, so better to inline the logic
     pub fn is_empty(&self) -> bool {
@@ -1095,6 +1088,15 @@ enum FStringValueInner {
 pub enum FStringPart {
     Literal(StringLiteral),
     FString(FString),
+}
+
+impl Ranged for FStringPart {
+    fn range(&self) -> TextRange {
+        match self {
+            FStringPart::Literal(string_literal) => string_literal.range(),
+            FStringPart::FString(f_string) => f_string.range(),
+        }
+    }
 }
 
 /// An AST node that represents a single f-string which is part of an [`ExprFString`].
@@ -1182,6 +1184,15 @@ impl StringLiteralValue {
         match &self.inner {
             StringLiteralValueInner::Single(value) => Left(std::iter::once(value)),
             StringLiteralValueInner::Concatenated(value) => Right(value.strings.iter()),
+        }
+    }
+
+    /// Returns an iterator over all the [`StringLiteral`]s contained in this value
+    /// that allows modification.
+    pub(crate) fn parts_mut(&mut self) -> impl Iterator<Item = &mut StringLiteral> {
+        match &mut self.inner {
+            StringLiteralValueInner::Single(value) => Left(std::iter::once(value)),
+            StringLiteralValueInner::Concatenated(value) => Right(value.strings.iter_mut()),
         }
     }
 
@@ -1333,7 +1344,19 @@ impl BytesLiteralValue {
 
     /// Returns an iterator over all the [`BytesLiteral`]s contained in this value.
     pub fn parts(&self) -> impl Iterator<Item = &BytesLiteral> {
-        self.inner.as_slice().iter()
+        match &self.inner {
+            BytesLiteralValueInner::Single(value) => Left(std::iter::once(value)),
+            BytesLiteralValueInner::Concatenated(values) => Right(values.iter()),
+        }
+    }
+
+    /// Returns an iterator over all the [`BytesLiteral`]s contained in this value
+    /// that allows modification.
+    pub(crate) fn parts_mut(&mut self) -> impl Iterator<Item = &mut BytesLiteral> {
+        match &mut self.inner {
+            BytesLiteralValueInner::Single(value) => Left(std::iter::once(value)),
+            BytesLiteralValueInner::Concatenated(values) => Right(values.iter_mut()),
+        }
     }
 
     /// Returns `true` if the concatenated bytes has a length of zero.
@@ -1374,16 +1397,6 @@ enum BytesLiteralValueInner {
 impl Default for BytesLiteralValueInner {
     fn default() -> Self {
         Self::Single(BytesLiteral::default())
-    }
-}
-
-impl BytesLiteralValueInner {
-    /// Extracts a slice containing all the [`BytesLiteral`]s contained in this value.
-    fn as_slice(&self) -> &[BytesLiteral] {
-        match self {
-            Self::Single(value) => std::slice::from_ref(value),
-            Self::Concatenated(values) => values.as_slice(),
-        }
     }
 }
 
