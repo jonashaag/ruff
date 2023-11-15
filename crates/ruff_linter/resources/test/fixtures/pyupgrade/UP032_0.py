@@ -207,3 +207,17 @@ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 # The fixed string will exceed the line length, but it's still smaller than the
 # existing line length, so it's fine.
 "<Customer: {}, {}, {}, {}, {}>".format(self.internal_ids, self.external_ids, self.properties, self.tags, self.others)
+
+
+# The first string will be converted to an f-string and the curly braces in the second should be converted to be unescaped
+(
+    "{}"
+    "{{}}"
+).format(a)
+
+
+# Both strings will be converted to an f-string and the curly braces in the second should left escaped
+(
+    "{}"
+    "{{{}}}"
+).format(a, b)

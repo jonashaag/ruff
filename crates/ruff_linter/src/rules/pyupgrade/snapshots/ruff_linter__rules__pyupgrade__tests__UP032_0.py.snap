@@ -971,5 +971,54 @@ UP032_0.py:209:1: UP032 [*] Use f-string instead of `format` call
 208 208 | # existing line length, so it's fine.
 209     |-"<Customer: {}, {}, {}, {}, {}>".format(self.internal_ids, self.external_ids, self.properties, self.tags, self.others)
     209 |+f"<Customer: {self.internal_ids}, {self.external_ids}, {self.properties}, {self.tags}, {self.others}>"
+210 210 | 
+211 211 | 
+212 212 | # The first string will be converted to an f-string and the curly braces in the second should be converted to be unescaped
+
+UP032_0.py:213:1: UP032 [*] Use f-string instead of `format` call
+    |
+212 |   # The first string will be converted to an f-string and the curly braces in the second should be converted to be unescaped
+213 | / (
+214 | |     "{}"
+215 | |     "{{}}"
+216 | | ).format(a)
+    | |___________^ UP032
+    |
+    = help: Convert to f-string
+
+ℹ Safe fix
+211 211 | 
+212 212 | # The first string will be converted to an f-string and the curly braces in the second should be converted to be unescaped
+213 213 | (
+214     |-    "{}"
+    214 |+    f"{a}"
+215 215 |     "{{}}"
+216     |-).format(a)
+    216 |+)
+217 217 | 
+218 218 | 
+219 219 | # Both strings will be converted to an f-string and the curly braces in the second should left escaped
+
+UP032_0.py:220:1: UP032 [*] Use f-string instead of `format` call
+    |
+219 |   # Both strings will be converted to an f-string and the curly braces in the second should left escaped
+220 | / (
+221 | |     "{}"
+222 | |     "{{{}}}"
+223 | | ).format(a, b)
+    | |______________^ UP032
+    |
+    = help: Convert to f-string
+
+ℹ Safe fix
+218 218 | 
+219 219 | # Both strings will be converted to an f-string and the curly braces in the second should left escaped
+220 220 | (
+221     |-    "{}"
+222     |-    "{{{}}}"
+223     |-).format(a, b)
+    221 |+    f"{a}"
+    222 |+    f"{{{b}}}"
+    223 |+)
 
 
