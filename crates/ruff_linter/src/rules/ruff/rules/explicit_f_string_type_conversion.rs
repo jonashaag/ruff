@@ -53,15 +53,13 @@ impl AlwaysFixableViolation for ExplicitFStringTypeConversion {
 
 /// RUF010
 pub(crate) fn explicit_f_string_type_conversion(checker: &mut Checker, f_string: &ast::FString) {
-    for (index, formatted_value) in f_string
-        .values
-        .iter()
-        .filter_map(|expr| expr.as_formatted_value_expr())
-        .enumerate()
-    {
-        let ast::ExprFormattedValue {
+    for (index, expr) in f_string.values.iter().enumerate() {
+        let Some(ast::ExprFormattedValue {
             value, conversion, ..
-        } = formatted_value;
+        }) = expr.as_formatted_value_expr()
+        else {
+            continue;
+        };
 
         // Skip if there's already a conversion flag.
         if !conversion.is_none() {

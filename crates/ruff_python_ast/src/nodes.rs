@@ -1207,13 +1207,13 @@ impl StringLiteralValue {
 
 impl PartialEq<str> for StringLiteralValue {
     fn eq(&self, other: &str) -> bool {
-        self == other
+        self.as_str() == other
     }
 }
 
 impl PartialEq<String> for StringLiteralValue {
     fn eq(&self, other: &String) -> bool {
-        self == other
+        self.as_str() == other
     }
 }
 
