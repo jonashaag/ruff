@@ -5,7 +5,9 @@ use ruff_python_ast::{self as ast, Expr, Operator};
 use ruff_diagnostics::{Diagnostic, Violation};
 use ruff_macros::{derive_message_formats, violation};
 use ruff_python_ast::helpers::any_over_expr;
+use ruff_python_ast::str::raw_contents;
 use ruff_python_semantic::SemanticModel;
+use ruff_source_file::Locator;
 use ruff_text_size::Ranged;
 
 use crate::checkers::ast::Checker;
@@ -80,31 +82,20 @@ fn matches_string_format_expression(expr: &Expr, semantic: &SemanticModel) -> bo
     }
 }
 
-fn concatenated_f_string_literal(expr: &ast::ExprFString) -> String {
-    let mut string = String::new();
-    for f_string_part in expr.value.parts() {
-        match f_string_part {
-            ast::FStringPart::Literal(string_literal) => string.push_str(string_literal),
-            ast::FStringPart::FString(f_string) => string.push_str(
-                &f_string
-                    .values
-                    .iter()
-                    .filter_map(|expr| {
-                        expr.as_string_literal_expr()
-                            .map(|string_literal| string_literal.value.as_str())
-                    })
-                    .collect::<String>(),
-            ),
-        }
-    }
-    string
+fn concatenated_f_string(expr: &ast::ExprFString, locator: &Locator) -> String {
+    expr.value
+        .parts()
+        .filter_map(|part| {
+            raw_contents(locator.slice(part)).map(|s| s.escape_default().to_string())
+        })
+        .collect()
 }
 
 /// S608
 pub(crate) fn hardcoded_sql_expression(checker: &mut Checker, expr: &Expr) {
     if matches_string_format_expression(expr, checker.semantic()) {
         let source_code = match expr {
-            Expr::FString(f_string) => concatenated_f_string_literal(f_string),
+            Expr::FString(f_string) => concatenated_f_string(f_string, checker.locator()),
             _ => checker.generator().expr(expr),
         };
         if matches_sql_statement(&source_code) {
